@@ -359,11 +359,25 @@
         </div>
 
         
+
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
             <button onclick="openAddModal()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <i class="fa-solid fa-user-plus"></i> Add New Member
             </button>
+            <button onclick="downloadFamilyData()" style="background: #059669; color: white; border: none; padding: 12px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" title="Download Family Tree JSON Backup">
+                <i class="fa-solid fa-download"></i> Backup Tree
+            </button>
         </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 16px; background: white; padding: 6px; border-radius: 12px; border: 1px solid var(--border);">
+            <button id="btn-view-list" onclick="switchView('list')" style="flex: 1; background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <i class="fa-solid fa-list"></i> Card Directory
+            </button>
+            <button id="btn-view-tree" onclick="switchView('tree')" style="flex: 1; background: transparent; color: var(--text); border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                <i class="fa-solid fa-sitemap"></i> Tree Hierarchy View
+            </button>
+        </div>
+
 
         <div class="controls">
             <div class="search-box">
@@ -388,6 +402,12 @@
                 <button class="filter-btn" onclick="setBranch('Sammy', this)">Sammy</button>
                 <button class="filter-btn" onclick="setBranch('Rhoda', this)">Rhoda</button>
             </div>
+        </div>
+
+        
+        <div id="tree-container" style="display: none; background: white; border-radius: 12px; padding: 20px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 14px;"><i class="fa-solid fa-sitemap"></i> Family Branches & Hierarchy</h3>
+            <div id="tree-hierarchy-content" style="display: flex; flex-direction: column; gap: 16px;"></div>
         </div>
 
         <div class="card-list" id="card-container">
@@ -661,6 +681,81 @@
             document.getElementById('profile-modal').style.display = 'none';
         }
 
+        
+        let currentView = 'list';
+
+        function switchView(view) {
+            currentView = view;
+            const listContainer = document.getElementById('card-container');
+            const treeContainer = document.getElementById('tree-container');
+            const btnList = document.getElementById('btn-view-list');
+            const btnTree = document.getElementById('btn-view-tree');
+            const searchBox = document.querySelector('.controls');
+
+            if (view === 'list') {
+                listContainer.style.display = 'flex';
+                treeContainer.style.display = 'none';
+                searchBox.style.display = 'flex';
+                btnList.style.background = 'var(--primary)';
+                btnList.style.color = 'white';
+                btnTree.style.background = 'transparent';
+                btnTree.style.color = 'var(--text)';
+                filterData();
+            } else {
+                listContainer.style.display = 'none';
+                treeContainer.style.display = 'block';
+                searchBox.style.display = 'none';
+                btnTree.style.background = 'var(--primary)';
+                btnTree.style.color = 'white';
+                btnList.style.background = 'transparent';
+                btnList.style.color = 'var(--text)';
+                renderTreeView();
+            }
+        }
+
+        function downloadFamilyData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(familyData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "ndambuki_family_tree_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function renderTreeView() {
+            const container = document.getElementById('tree-hierarchy-content');
+            
+            // Group by branches
+            const branches = {};
+            familyData.forEach(p => {
+                const b = p.branch || 'Other';
+                if (!branches[b]) branches[b] = [];
+                branches[b].push(p);
+            });
+
+            container.innerHTML = Object.keys(branches).map(branchName => {
+                const members = branches[branchName];
+                return `
+                    <div style="border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--bg);">
+                        <div style="font-weight: 700; color: var(--primary); font-size: 1rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fa-solid fa-folder-tree"></i> ${branchName}</span>
+                            <span style="font-size: 0.75rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 6px;">${members.length} members</span>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                            ${members.map(m => `
+                                <div onclick="openProfileModal('${m.id}')" style="background: white; border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click for profile">
+                                    <i class="fa-solid fa-user" style="font-size: 0.75rem; color: var(--text-muted);"></i>
+                                    <span style="font-weight: 500;">${m.name}</span>
+                                    <span style="font-size: 0.7rem; color: var(--text-muted);">(${m.generation})</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Initial render
         filterData();
     </script>
@@ -746,3 +841,15 @@
                 });
             });
         }
+    </script>
+
+
+    <!-- Profile Details Modal -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="profile-modal-content">
+            <div class="modal-header" style="margin-bottom: 12px;">
+                <h2>Member Profile</h2>
+                <button class="close-btn" onclick="closeProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="profile-header">
+                <div class="profile
