@@ -757,34 +757,44 @@
         function renderTreeView() {
             const container = document.getElementById('tree-hierarchy-content');
             
-            // Group by branches
-            const branches = {};
+            // Group by Generation (Gen 1, Gen 3, Gen 4, Gen 5)
+            const gens = {};
             familyData.forEach(p => {
-                const b = p.branch || 'Other';
-                if (!branches[b]) branches[b] = [];
-                branches[b].push(p);
+                const g = p.generation || 'Gen 4';
+                if (!gens[g]) gens[g] = [];
+                gens[g].push(p);
             });
 
-            container.innerHTML = Object.keys(branches).map(branchName => {
-                const members = branches[branchName];
-                return `
-                    <div style="border: 1px solid var(--border); border-radius: 10px; padding: 14px; background: var(--bg);">
-                        <div style="font-weight: 700; color: var(--primary); font-size: 1rem; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                            <span><i class="fa-solid fa-folder-tree"></i> ${branchName}</span>
-                            <span style="font-size: 0.75rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 6px;">${members.length} members</span>
+            const genOrder = ['Gen 1', 'Gen 2', 'Gen 3', 'Gen 4', 'Gen 5'];
+            let html = '';
+
+            genOrder.forEach(gen => {
+                if (!gens[gen] || gens[gen].length === 0) return;
+                const members = gens[gen];
+
+                html += `
+                    <div style="margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--card-bg);">
+                        <div style="font-weight: 700; color: var(--primary); font-size: 1.1rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
+                            <span><i class="fa-solid fa-layer-group"></i> ${gen} Hierarchy & Connections</span>
+                            <span style="font-size: 0.75rem; background: var(--primary); color: white; padding: 3px 10px; border-radius: 6px;">${members.length} Members</span>
                         </div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
-                            ${members.map(m => `
-                                <div onclick="openProfileModal('${m.id}')" style="background: white; border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;" title="Click for profile">
-                                    <i class="fa-solid fa-user" style="font-size: 0.75rem; color: var(--text-muted);"></i>
-                                    <span style="font-weight: 500;">${m.name}</span>
-                                    <span style="font-size: 0.7rem; color: var(--text-muted);">(${m.generation})</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
                 `;
-            }).join('');
+
+                members.forEach(m => {
+                    html += `
+                        <div onclick="openProfileModal('${m.id}')" style="background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Click for profile">
+                            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">${m.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;"><i class="fa-solid fa-sitemap"></i> ${m.branch}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Parents: ${m.parents || 'N/A'}</div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
         }
 
         
@@ -886,3 +896,91 @@
                         <option value="Nduume Branch">Nduume Branch</option>
                         <option value="Aaron Branch">Aaron Branch</option>
                         <option value="Sammy Branch">Sammy Branch</option>
+                        <option value="Rhoda Branch">Rhoda Branch</option>
+                        <option value="Foundational Ancestor">Foundational Ancestor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth (DOB)</label>
+                    <input type="date" id="m-dob">
+                </div>
+                <div class="form-group">
+                    <label>Death Date (Leave blank if living)</label>
+                    <input type="date" id="m-death">
+                </div>
+                <div class="form-group">
+                    <label>Spouse / Partner</label>
+                    <input type="text" id="m-spouse" placeholder="e.g. Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Lineage</label>
+                    <input type="text" id="m-parents" placeholder="e.g. Titus & Rose">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // Register Service Worker for PWA offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+
+
+    <!-- Profile Details Modal -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="profile-modal-content">
+            <div class="modal-header" style="margin-bottom: 12px;">
+                <h2>Member Profile</h2>
+                <button class="close-btn" onclick="closeProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="profile-header">
+                <div class="profile-avatar" id="prof-avatar-box">
+                    <img id="prof-img" src="" alt="" style="display:none;">
+                    <i id="prof-icon" class="fa-solid fa-user"></i>
+                </div>
+                <div class="profile-info">
+                    <h3 id="prof-name"></h3>
+                    <p id="prof-meta"></p>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="profile-section">
+                    <span>Role / Relationship</span>
+                    <div id="prof-role"></div>
+                </div>
+                <div class="profile-section">
+                    <span>Branch</span>
+                    <div id="prof-branch"></div>
+                </div>
+                <div class="profile-section">
+                    <span>Dates (DOB & Death)</span>
+                    <div id="prof-dates"></div>
+                </div>
+                <div class="profile-section">
+                    <span>Spouse / Partner</span>
+                    <div id="prof-spouse"></div>
+                </div>
+                <div class="profile-section">
+                    <span>Parents / Lineage</span>
+                    <div id="prof-parents"></div>
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 20px;">
+                <button type="button" class="btn-primary" onclick="closeProfileModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
