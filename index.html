@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ndambuki Family Tree Explorer</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1E3A8A;
+            --primary-light: #3B82F6;
+            --accent: #2563EB;
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text: #1E293B;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+            --male-bg: #EFF6FF;
+            --female-bg: #FDF2F8;
+            --male-border: #BFDBFE;
+            --female-border: #FBCFE8;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 40px; }
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            padding: 24px 16px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+        header p { font-size: 0.9rem; opacity: 0.9; }
+        
+        .container { max-width: 800px; margin: 0 auto; padding: 16px; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            padding: 14px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+        .stat-card h3 { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .stat-card p { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .search-box input {
+            width: 100%;
+            padding: 12px 14px 12px 42px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            background: var(--card-bg);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .search-box input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .filter-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .person-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .person-card.female { background: var(--female-bg); border-color: var(--female-border); }
+        .person-card.male { background: var(--male-bg); border-color: var(--male-border); }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .person-name {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .person-gen {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        
+        .card-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .card-details div span { font-weight: 500; color: var(--text); }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .branch-tag {
+            background: rgba(0,0,0,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+    
+        .avatar-container {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+            position: relative;
+        }
+        .avatar-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-container i {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+        .avatar-container:hover::after {
+            content: '\f030';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+    
+        /* Modal and Edit/Add Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-header h2 { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
+        .close-btn { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text-muted); }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            background: var(--bg);
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary-light); background: white; }
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .btn-primary {
+            flex: 1;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            flex: 1;
+            background: #E2E8F0;
+            color: var(--text);
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .edit-icon-btn {
+            background: rgba(0,0,0,0.05);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+        .edit-icon-btn:hover { background: var(--primary); color: white; }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Ndambuki Family Tree</h1>
+        <p>Interactive Mobile Explorer & Complete Master Records</p>
+    </header>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="total-count">116</h3>
+                <p>Total Members</p>
+            </div>
+            <div class="stat-card">
+                <h3>14</h3>
+                <p>Branches</p>
+            </div>
+            <div class="stat-card">
+                <h3>Gen 1 - 5</h3>
+                <p>Generations</p>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button onclick="openAddModal()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <i class="fa-solid fa-user-plus"></i> Add New Member
+            </button>
+        </div>
+
+        <div class="controls">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="search-input" placeholder="Search by name, role, branch, spouse..." oninput="filterData()">
+            </div>
+            <div class="filter-row" id="branch-filters">
+                <button class="filter-btn active" onclick="setBranch('All', this)">All Branches</button>
+                <button class="filter-btn" onclick="setBranch('Foundational', this)">Foundational</button>
+                <button class="filter-btn" onclick="setBranch('Mang', this)">Mang'uu</button>
+                <button class="filter-btn" onclick="setBranch('Mumo', this)">Mumo</button>
+                <button class="filter-btn" onclick="setBranch('Muasya', this)">Muasya</button>
+                <button class="filter-btn" onclick="setBranch('Muli', this)">Muli</button>
+                <button class="filter-btn" onclick="setBranch('Usyu', this)">Usyu</button>
+                <button class="filter-btn" onclick="setBranch('Watuma', this)">Watuma</button>
+                <button class="filter-btn" onclick="setBranch('Mutunga', this)">Mutunga</button>
+                <button class="filter-btn" onclick="setBranch('Sherinah', this)">Sherinah</button>
+                <button class="filter-btn" onclick="setBranch('Kaswii', this)">Kaswii</button>
+                <button class="filter-btn" onclick="setBranch('Mutete', this)">Mutete</button>
+                <button class="filter-btn" onclick="setBranch('Nduume', this)">Nduume</button>
+                <button class="filter-btn" onclick="setBranch('Aaron', this)">Aaron</button>
+                <button class="filter-btn" onclick="setBranch('Sammy', this)">Sammy</button>
+                <button class="filter-btn" onclick="setBranch('Rhoda', this)">Rhoda</button>
+            </div>
+        </div>
+
+        <div class="card-list" id="card-container">
+            <!-- Cards rendered dynamically -->
+        </div>
+    </div>
+
+    <script>
+        const familyData = [{"id": 1, "generation": "Gen 1", "name": "Benjamin Ndambuki Watuma", "role": "Patriarch / Family Head", "dob": "1898-01-01", "death": "1989-10-22", "spouse": "Munovi & Rebecca Ndunge", "parents": "Foundational Lineage", "branch": "Foundational Ancestor (Dec Oct 22, 1989)"}, {"id": 2, "generation": "Gen 1", "name": "Munovi", "role": "Matriarch / Wife", "dob": "", "death": "", "spouse": "Benjamin Ndambuki Watuma", "parents": "Foundational Lineage", "branch": "Foundational Ancestor"}, {"id": 3, "generation": "Gen 1", "name": "Rebecca Ndunge", "role": "Matriarch / Wife", "dob": "", "death": "", "spouse": "Benjamin Ndambuki Watuma", "parents": "Foundational Lineage", "branch": "Foundational Ancestor"}, {"id": 4, "generation": "Gen 3", "name": "Titus Mang'uu Ndambuki", "role": "Branch Head", "dob": "1948-02-25", "death": "2026-09-03", "spouse": "Rose Ngina Mang'uu", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Mang'uu Branch"}, {"id": 5, "generation": "Gen 3", "name": "Rose Ngina Mang'uu", "role": "Spouse", "dob": "1956-07-01", "death": "2014-02-19", "spouse": "Titus Mang'uu Ndambuki", "parents": "Mang'uu Family", "branch": "Mang'uu Branch"}, {"id": 6, "generation": "Gen 4", "name": "Esther Ndunge", "role": "Child", "dob": "1980-11-04", "death": "", "spouse": "Boaz Moruri Moturi", "parents": "Titus & Rose", "branch": "Mang'uu Branch"}, {"id": 7, "generation": "Gen 4", "name": "Boaz Moruri Moturi", "role": "Spouse to Esther", "dob": "", "death": "", "spouse": "Esther Ndunge", "parents": "Moruri Family", "branch": "Mang'uu Branch"}, {"id": 8, "generation": "Gen 5", "name": "Ariana Kemuma Moruri", "role": "Grandchild", "dob": "2009-08-23", "death": "", "spouse": "", "parents": "Esther & Boaz", "branch": "Mang'uu Branch"}, {"id": 9, "generation": "Gen 5", "name": "Aleina Ngina Moruri", "role": "Grandchild", "dob": "2012-07-14", "death": "", "spouse": "", "parents": "Esther & Boaz", "branch": "Mang'uu Branch"}, {"id": 10, "generation": "Gen 5", "name": "Adriel Moturi Moruri", "role": "Grandchild", "dob": "2016-08-07", "death": "", "spouse": "", "parents": "Esther & Boaz", "branch": "Mang'uu Branch"}, {"id": 11, "generation": "Gen 5", "name": "Adelia Moruri", "role": "Grandchild", "dob": "2026-07-01", "death": "", "spouse": "", "parents": "Esther & Boaz", "branch": "Mang'uu Branch"}, {"id": 12, "generation": "Gen 4", "name": "Dickson Ndambuki Mang'uu", "role": "Child", "dob": "1982-02-01", "death": "", "spouse": "Virginia Mbithe Mutua", "parents": "Titus & Rose", "branch": "Mang'uu Branch"}, {"id": 13, "generation": "Gen 4", "name": "Virginia Mbithe Mutua", "role": "Spouse to Dickson", "dob": "1986-08-03", "death": "", "spouse": "Dickson Ndambuki Mang'uu", "parents": "Mutua Family", "branch": "Mang'uu Branch"}, {"id": 14, "generation": "Gen 5", "name": "Gabriel Baraka Watuma Ndambuki", "role": "Grandchild", "dob": "2014-04-10", "death": "", "spouse": "", "parents": "Dickson & Virginia", "branch": "Mang'uu Branch"}, {"id": 15, "generation": "Gen 5", "name": "Tindy Ngina Ndambuki", "role": "Grandchild", "dob": "2021-01-08", "death": "", "spouse": "", "parents": "Dickson & Virginia", "branch": "Mang'uu Branch"}, {"id": 16, "generation": "Gen 4", "name": "Dephine Syokau", "role": "Child", "dob": "1985-11-09", "death": "", "spouse": "", "parents": "Titus & Rose", "branch": "Mang'uu Branch"}, {"id": 17, "generation": "Gen 5", "name": "Tess Wanjiru Gathitu", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Dephine Syokau", "branch": "Mang'uu Branch"}, {"id": 18, "generation": "Gen 5", "name": "Valerie Ngina Gathitu", "role": "Grandchild", "dob": "2011-07-17", "death": "", "spouse": "", "parents": "Dephine Syokau", "branch": "Mang'uu Branch"}, {"id": 19, "generation": "Gen 5", "name": "Zack Ngugi Gathitu", "role": "Grandchild", "dob": "2015-03-22", "death": "", "spouse": "", "parents": "Dephine Syokau", "branch": "Mang'uu Branch"}, {"id": 20, "generation": "Gen 3", "name": "Daniel Mumo Ndambuki", "role": "Branch Head", "dob": "1957-02-18", "death": "", "spouse": "Emily Mutindi Mumo", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Mumo Branch"}, {"id": 21, "generation": "Gen 3", "name": "Emily Mutindi Mumo", "role": "Spouse", "dob": "1963-09-27", "death": "", "spouse": "Daniel Mumo Ndambuki", "parents": "Mumo Family", "branch": "Mumo Branch"}, {"id": 22, "generation": "Gen 4", "name": "Philip Watuma Mumo", "role": "Child", "dob": "1988-01-07", "death": "", "spouse": "Angelina Mwamrizi", "parents": "Daniel & Emily", "branch": "Mumo Branch"}, {"id": 23, "generation": "Gen 4", "name": "Angelina Mwamrizi", "role": "Spouse to Philip", "dob": "1963-03-13", "death": "", "spouse": "Philip Watuma Mumo", "parents": "Mwamrizi Family", "branch": "Mumo Branch"}, {"id": 24, "generation": "Gen 5", "name": "Ruby Watuma", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Philip & Angelina", "branch": "Mumo Branch"}, {"id": 25, "generation": "Gen 5", "name": "Keila Watuma", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Philip & Angelina", "branch": "Mumo Branch"}, {"id": 26, "generation": "Gen 4", "name": "Benjamin Tua Mumo", "role": "Child", "dob": "1963-07-12", "death": "", "spouse": "Hannah Muthoni", "parents": "Daniel & Emily", "branch": "Mumo Branch"}, {"id": 27, "generation": "Gen 4", "name": "Hannah Muthoni", "role": "Spouse to Benjamin", "dob": "1994-12-02", "death": "", "spouse": "Benjamin Tua Mumo", "parents": "Hannah Family", "branch": "Mumo Branch"}, {"id": 28, "generation": "Gen 5", "name": "Melody Tua", "role": "Grandchild", "dob": "2025-04-15", "death": "", "spouse": "", "parents": "Benjamin & Hannah", "branch": "Mumo Branch"}, {"id": 29, "generation": "Gen 4", "name": "Dickson Ndambuki Mumo", "role": "Child", "dob": "1964-04-24", "death": "", "spouse": "", "parents": "Daniel & Emily", "branch": "Mumo Branch"}, {"id": 30, "generation": "Gen 3", "name": "David Muasya Ndambuki", "role": "Branch Head", "dob": "1960-07-04", "death": "", "spouse": "Winfred Mbula Muasya", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Muasya Branch"}, {"id": 31, "generation": "Gen 3", "name": "Winfred Mbula Muasya", "role": "Spouse", "dob": "1963-07-15", "death": "", "spouse": "David Muasya Ndambuki", "parents": "Muasya Family", "branch": "Muasya Branch"}, {"id": 32, "generation": "Gen 4", "name": "Eva Mutete Muasya", "role": "Child", "dob": "1989-05-22", "death": "", "spouse": "", "parents": "David & Winfred", "branch": "Muasya Branch"}, {"id": 33, "generation": "Gen 5", "name": "Kyan", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Eva Mutete Muasya", "branch": "Muasya Branch"}, {"id": 34, "generation": "Gen 4", "name": "Mary Ndunge", "role": "Child", "dob": "1993-12-24", "death": "", "spouse": "Emmanuel Kinyanjui", "parents": "David & Winfred", "branch": "Muasya Branch"}, {"id": 35, "generation": "Gen 4", "name": "Emmanuel Kinyanjui", "role": "Spouse to Mary", "dob": "", "death": "", "spouse": "Mary Ndunge", "parents": "Kinyanjui Family", "branch": "Muasya Branch"}, {"id": 36, "generation": "Gen 5", "name": "Riguel Kinyanjui", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Mary & Emmanuel", "branch": "Muasya Branch"}, {"id": 37, "generation": "Gen 5", "name": "Ciara Kinyanjui", "role": "Grandchild", "dob": "2024-04-26", "death": "", "spouse": "", "parents": "Mary & Emmanuel", "branch": "Muasya Branch"}, {"id": 38, "generation": "Gen 4", "name": "John Tutu", "role": "Child", "dob": "2000-11-24", "death": "", "spouse": "", "parents": "David & Winfred", "branch": "Muasya Branch"}, {"id": 39, "generation": "Gen 3", "name": "Esther Mwikali Muli", "role": "Branch Head", "dob": "1940-09-12", "death": "", "spouse": "Simon Muli", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Muli Branch"}, {"id": 40, "generation": "Gen 3", "name": "Simon Muli", "role": "Spouse", "dob": "", "death": "", "spouse": "Esther Mwikali Muli", "parents": "Muli Family", "branch": "Muli Branch"}, {"id": 41, "generation": "Gen 4", "name": "Gideon Mutava Muli", "role": "Child", "dob": "", "death": "", "spouse": "Martha Mutava", "parents": "Simon & Esther", "branch": "Muli Branch"}, {"id": 42, "generation": "Gen 4", "name": "Martha Mutava", "role": "Spouse to Gideon", "dob": "", "death": "", "spouse": "Gideon Mutava Muli", "parents": "Mutava Family", "branch": "Muli Branch"}, {"id": 43, "generation": "Gen 5", "name": "Esther Mwikali", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Gideon & Martha", "branch": "Muli Branch"}, {"id": 44, "generation": "Gen 5", "name": "Kevin Mbithi", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Gideon & Martha", "branch": "Muli Branch"}, {"id": 45, "generation": "Gen 4", "name": "Wellington Kyalo Muli", "role": "Child", "dob": "", "death": "2024-01-29", "spouse": "Stella Wayua", "parents": "Simon & Esther", "branch": "Muli Branch"}, {"id": 46, "generation": "Gen 4", "name": "Stella Wayua", "role": "Spouse to Wellington", "dob": "", "death": "", "spouse": "Wellington Kyalo Muli", "parents": "Wayua Family", "branch": "Muli Branch"}, {"id": 47, "generation": "Gen 5", "name": "Ben Kyalo", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Wellington & Stella", "branch": "Muli Branch"}, {"id": 48, "generation": "Gen 5", "name": "Grace Kyalo", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Wellington & Stella", "branch": "Muli Branch"}, {"id": 49, "generation": "Gen 5", "name": "Japheth Kyalo", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Wellington & Stella", "branch": "Muli Branch"}, {"id": 50, "generation": "Gen 4", "name": "Paul Mwalili Muli", "role": "Child", "dob": "1964-01-01", "death": "", "spouse": "Jacinta Mwalili", "parents": "Simon & Esther", "branch": "Muli Branch"}, {"id": 51, "generation": "Gen 4", "name": "Jacinta Mwalili", "role": "Spouse to Paul", "dob": "", "death": "", "spouse": "Paul Mwalili Muli", "parents": "Mwalili Family", "branch": "Muli Branch"}, {"id": 52, "generation": "Gen 5", "name": "Alex Mwalili", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Paul & Jacinta", "branch": "Muli Branch"}, {"id": 53, "generation": "Gen 5", "name": "Simon Ngeli Mwalili", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Paul & Jacinta", "branch": "Muli Branch"}, {"id": 54, "generation": "Gen 5", "name": "Daniel Mumo", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Paul & Jacinta", "branch": "Muli Branch"}, {"id": 55, "generation": "Gen 5", "name": "David Muthiani", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Paul & Jacinta", "branch": "Muli Branch"}, {"id": 56, "generation": "Gen 5", "name": "Simon Muli", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Paul & Jacinta", "branch": "Muli Branch"}, {"id": 57, "generation": "Gen 4", "name": "Ben Muthiani Muli", "role": "Child", "dob": "1969-09-30", "death": "", "spouse": "Carol Nzisa Muthiani", "parents": "Simon & Esther", "branch": "Muli Branch"}, {"id": 58, "generation": "Gen 4", "name": "Carol Nzisa Muthiani", "role": "Spouse to Ben Muthiani", "dob": "1975-01-01", "death": "", "spouse": "Ben Muthiani Muli", "parents": "Muthiani Family", "branch": "Muli Branch"}, {"id": 59, "generation": "Gen 5", "name": "Eli Muli", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Ben & Carol", "branch": "Muli Branch"}, {"id": 60, "generation": "Gen 5", "name": "Eliana Mwikali", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Ben & Carol", "branch": "Muli Branch"}, {"id": 61, "generation": "Gen 5", "name": "Musyimi Muthiani", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Ben & Carol", "branch": "Muli Branch"}, {"id": 62, "generation": "Gen 3", "name": "Dephine Mbithe Usyu", "role": "Branch Head", "dob": "1946-03-14", "death": "", "spouse": "Usyu", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Usyu Branch"}, {"id": 63, "generation": "Gen 3", "name": "Usyu", "role": "Spouse", "dob": "", "death": "", "spouse": "Dephine Mbithe Usyu", "parents": "Usyu Family", "branch": "Usyu Branch"}, {"id": 64, "generation": "Gen 4", "name": "Simon Usyu", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 65, "generation": "Gen 4", "name": "Shem Ndambuki Usyu", "role": "Child", "dob": "1964-01-19", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 66, "generation": "Gen 4", "name": "Wanzila Usyu", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 67, "generation": "Gen 4", "name": "Grace Usyu", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 68, "generation": "Gen 4", "name": "Muthoki Usyu", "role": "Child", "dob": "1964-08-12", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 69, "generation": "Gen 4", "name": "Ndunge Usyu", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 70, "generation": "Gen 4", "name": "Miriam Mueni Usyu", "role": "Child", "dob": "2000-11-23", "death": "", "spouse": "", "parents": "Dephine & Usyu", "branch": "Usyu Branch"}, {"id": 71, "generation": "Gen 3", "name": "Joseph Watuma Ndambuki", "role": "Branch Head", "dob": "1964-02-10", "death": "", "spouse": "Hellen Mutheu Watuma", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Watuma Branch"}, {"id": 72, "generation": "Gen 3", "name": "Hellen Mutheu Watuma", "role": "Spouse", "dob": "1964-02-10", "death": "", "spouse": "Joseph Watuma Ndambuki", "parents": "Watuma Family", "branch": "Watuma Branch"}, {"id": 73, "generation": "Gen 4", "name": "Kennedy Ndambuki Watuma", "role": "Child", "dob": "1986-10-10", "death": "", "spouse": "", "parents": "Joseph & Hellen", "branch": "Watuma Branch"}, {"id": 74, "generation": "Gen 4", "name": "Kevin Mulwa Watuma", "role": "Child", "dob": "1990-09-09", "death": "", "spouse": "", "parents": "Joseph & Hellen", "branch": "Watuma Branch"}, {"id": 75, "generation": "Gen 4", "name": "Becky Mueke", "role": "Child", "dob": "2000-01-09", "death": "", "spouse": "", "parents": "Joseph & Hellen", "branch": "Watuma Branch"}, {"id": 76, "generation": "Gen 4", "name": "Bernice Mbatha", "role": "Child", "dob": "2000-01-09", "death": "", "spouse": "", "parents": "Joseph & Hellen", "branch": "Watuma Branch"}, {"id": 77, "generation": "Gen 3", "name": "Serah Mutunga Watuma", "role": "Branch Head", "dob": "1942-03-19", "death": "", "spouse": "Mutunga", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Mutunga Branch"}, {"id": 78, "generation": "Gen 3", "name": "Mutunga", "role": "Spouse", "dob": "", "death": "", "spouse": "Serah Mutunga Watuma", "parents": "Mutunga Family", "branch": "Mutunga Branch"}, {"id": 79, "generation": "Gen 4", "name": "Yusuf Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 80, "generation": "Gen 4", "name": "Shem Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 81, "generation": "Gen 4", "name": "Jane Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 82, "generation": "Gen 4", "name": "Catherine Ndanu Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 83, "generation": "Gen 4", "name": "Mutua Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 84, "generation": "Gen 4", "name": "Mulwa Mutunga", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Serah & Mutunga", "branch": "Mutunga Branch"}, {"id": 85, "generation": "Gen 3", "name": "Sherinah Nzilani", "role": "Branch Head", "dob": "", "death": "", "spouse": "Solo", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Sherinah Branch"}, {"id": 86, "generation": "Gen 3", "name": "Solo", "role": "Spouse", "dob": "", "death": "", "spouse": "Sherinah Nzilani", "parents": "Solo Family", "branch": "Sherinah Branch"}, {"id": 87, "generation": "Gen 4", "name": "Hesborn Solomon", "role": "Child", "dob": "", "death": "", "spouse": "Rebecca Kimondio", "parents": "Sherinah & Solo", "branch": "Sherinah Branch"}, {"id": 88, "generation": "Gen 4", "name": "Rebecca Kimondio", "role": "Spouse to Hesborn", "dob": "", "death": "", "spouse": "Hesborn Solomon", "parents": "Kimondio Family", "branch": "Sherinah Branch"}, {"id": 89, "generation": "Gen 5", "name": "Sherinah", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Hesborn & Rebecca", "branch": "Sherinah Branch"}, {"id": 90, "generation": "Gen 5", "name": "Ndanu", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Hesborn & Rebecca", "branch": "Sherinah Branch"}, {"id": 91, "generation": "Gen 5", "name": "Hesborn Jnr", "role": "Grandchild", "dob": "2025-06-01", "death": "", "spouse": "", "parents": "Hesborn & Rebecca", "branch": "Sherinah Branch"}, {"id": 92, "generation": "Gen 3", "name": "Josephine Kaswii", "role": "Branch Head", "dob": "", "death": "", "spouse": "", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Kaswii Branch"}, {"id": 93, "generation": "Gen 4", "name": "Darius Ndambuki", "role": "Child", "dob": "1972-12-30", "death": "", "spouse": "", "parents": "Josephine Kaswii", "branch": "Kaswii Branch"}, {"id": 94, "generation": "Gen 3", "name": "Florence Mutete Ndambuki", "role": "Branch Head", "dob": "1965-03-22", "death": "", "spouse": "", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Mutete Branch"}, {"id": 95, "generation": "Gen 4", "name": "Dephine Ndunge Mutete", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Florence Mutete", "branch": "Mutete Branch"}, {"id": 96, "generation": "Gen 5", "name": "Amara Mutete", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Dephine Ndunge Mutete", "branch": "Mutete Branch"}, {"id": 97, "generation": "Gen 5", "name": "A. Mutete", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Dephine Ndunge Mutete", "branch": "Mutete Branch"}, {"id": 98, "generation": "Gen 3", "name": "Janet Nduume Ndambuki", "role": "Branch Head", "dob": "1951-01-01", "death": "2024-12-09", "spouse": "", "parents": "Benjamin Ndambuki & Rebecca Ndunge", "branch": "Nduume Branch"}, {"id": 99, "generation": "Gen 4", "name": "Dennis Ndambuki", "role": "Child", "dob": "1975-03-14", "death": "", "spouse": "Catherine Mutunga", "parents": "Janet Nduume", "branch": "Nduume Branch"}, {"id": 100, "generation": "Gen 4", "name": "Catherine Mutunga", "role": "Spouse to Dennis", "dob": "", "death": "", "spouse": "Dennis Ndambuki", "parents": "Mutunga Family", "branch": "Nduume Branch"}, {"id": 101, "generation": "Gen 5", "name": "Emma Wanza", "role": "Grandchild", "dob": "1997-11-06", "death": "", "spouse": "", "parents": "Dennis & Catherine", "branch": "Nduume Branch"}, {"id": 102, "generation": "Gen 5", "name": "Brian Ndambuki", "role": "Grandchild", "dob": "", "death": "", "spouse": "", "parents": "Dennis & Catherine", "branch": "Nduume Branch"}, {"id": 103, "generation": "Gen 3", "name": "Aaron Mutwiwa", "role": "Branch Head", "dob": "", "death": "", "spouse": "Veronica Mutwiwa", "parents": "Benjamin Ndambuki & Munovi", "branch": "Aaron Branch"}, {"id": 104, "generation": "Gen 3", "name": "Veronica Mutwiwa", "role": "Spouse", "dob": "", "death": "", "spouse": "Aaron Mutwiwa", "parents": "Mutwiwa Family", "branch": "Aaron Branch"}, {"id": 105, "generation": "Gen 4", "name": "Benjamin Mutua", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Aaron & Veronica", "branch": "Aaron Branch"}, {"id": 106, "generation": "Gen 4", "name": "Koki Mutwiwa", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Aaron & Veronica", "branch": "Aaron Branch"}, {"id": 107, "generation": "Gen 3", "name": "Sammy Musyoki", "role": "Branch Head", "dob": "", "death": "", "spouse": "Serah Nthenya Musyoki", "parents": "Benjamin Ndambuki & Munovi", "branch": "Sammy Branch"}, {"id": 108, "generation": "Gen 3", "name": "Serah Nthenya Musyoki", "role": "Spouse", "dob": "1938-01-01", "death": "2026-05-10", "spouse": "Sammy Musyoki", "parents": "Musyoki Family", "branch": "Sammy Branch"}, {"id": 109, "generation": "Gen 4", "name": "Micheal Watuma Musyoki", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Sammy & Serah", "branch": "Sammy Branch"}, {"id": 110, "generation": "Gen 3", "name": "Rhoda Muo", "role": "Branch Head", "dob": "", "death": "", "spouse": "", "parents": "Benjamin Ndambuki & Munovi", "branch": "Rhoda Branch"}, {"id": 111, "generation": "Gen 4", "name": "Nelson Mutisya Muuo", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}, {"id": 112, "generation": "Gen 4", "name": "Peter", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}, {"id": 113, "generation": "Gen 4", "name": "Maundu", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}, {"id": 114, "generation": "Gen 4", "name": "Mumbua", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}, {"id": 115, "generation": "Gen 4", "name": "Mary", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}, {"id": 116, "generation": "Gen 4", "name": "Annah Kithuka", "role": "Child", "dob": "", "death": "", "spouse": "", "parents": "Rhoda Muo", "branch": "Rhoda Branch"}];
+
+        const femaleNames = new Set([
+            'veronica mutwiwa', 'serah nthenya musyoki', 'rhoda muo', 'mumbua', 'mary', 'annah kithuka',
+            'esther mwikali muli', 'martha mutava', 'esther mwikali', 'stella wayua', 'grace kyalo',
+            'jacinta mwalili', 'eliana mwikali', 'carol nzisa muthiani', 'serah mutunga watuma',
+            'jane mutunga', 'catherine ndanu mutunga', 'sherinah nzilani', 'rebecca kimondio',
+            'sherinah', 'ndanu', 'dephine mbithe usyu', 'wanzila usyu', 'grace usyu', 'muthoki usyu',
+            'ndunge usyu', 'miriam mueni usyu', 'rose ngina mang\'uu', 'esther ndunge', 'ariana kemuma moruri',
+            'aleina ngina moruri', 'adelia moruri', 'virginia mbithe mutua', 'tindy ngina ndambuki',
+            'dephine syokau', 'tess wanjiru gathitu', 'valerie ngina gathitu', 'janet nduume ndambuki',
+            'catherine mutunga', 'emma wanza', 'josephine kaswii', 'hellen mutheu watuma',
+            'becky mueke', 'bernice mbatha', 'emily mutindi mumo', 'angelina mwamrizi', 'ruby watuma',
+            'keila watuma', 'hannah muthoni', 'melody tua', 'winfred mbula muasya', 'eva mutete muasya',
+            'mary ndunge', 'ciara kinyanjui', 'florence mutete ndambuki', 'dephine ndunge mutete',
+            'amara mutete', 'a. mutete', 'rebecca ndunge', 'munovi', 'koki mutwiwa', 'munovi & rebecca ndunge'
+        ]);
+
+        let currentBranch = 'All';
+
+        function setBranch(branch, btn) {
+            currentBranch = branch;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterData();
+        }
+
+        function filterData() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const container = document.getElementById('card-container');
+            
+            const filtered = familyData.filter(p => {
+                const matchesSearch = p.name.toLowerCase().includes(query) || 
+                                      p.role.toLowerCase().includes(query) || 
+                                      p.branch.toLowerCase().includes(query) ||
+                                      p.spouse.toLowerCase().includes(query) ||
+                                      p.parents.toLowerCase().includes(query);
+                
+                let matchesBranch = true;
+                if (currentBranch !== 'All') {
+                    if (currentBranch === 'Foundational') {
+                        matchesBranch = p.branch.toLowerCase().includes('foundational');
+                    } else {
+                        matchesBranch = p.branch.toLowerCase().includes(currentBranch.toLowerCase());
+                    }
+                }
+                return matchesSearch && matchesBranch;
+            });
+
+            document.getElementById('total-count').innerText = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="no-results"><i class="fa-solid fa-circle-exclamation fa-2x" style="margin-bottom:8px; color:var(--text-muted);"></i><p>No family members found matching your search.</p></div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const isFemale = femaleNames.has(p.name.toLowerCase()) || p.role.toLowerCase().includes('wife') || p.role.toLowerCase().includes('matriarch') || p.role.toLowerCase().includes('daughter') || p.role.toLowerCase().includes('granddaughter') || p.role.toLowerCase().includes('spouse');
+                const cardClass = isFemale ? 'person-card female' : 'person-card male';
+                
+                return `
+                    <div class="\${cardClass}">
+                        <div class="card-header">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="avatar-container" onclick="triggerPhotoUpload('\${p.id}')" title="Click to upload photo">
+                                    <img id="avatar-\${p.id}" src="${p.photo \vert{}\vert{} ''}" alt="" style="display: ${p.photo ? 'block' : 'none'};">
+                                    <i id="avatar-icon-\${p.id}" class="fa-solid fa-
