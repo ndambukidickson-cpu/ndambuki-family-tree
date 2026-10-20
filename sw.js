@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ndambuki-family-v1';
+const CACHE_NAME = 'ndambuki-family-v2';
 const urlsToCache = [
   'index.html',
   'manifest.json'
