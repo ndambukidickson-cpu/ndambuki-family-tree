@@ -754,51 +754,72 @@
             }
         }
 
-        function renderTreeView() {
+                function renderTreeView() {
             const container = document.getElementById('tree-hierarchy-content');
             
-            // Group by Generation (Gen 1, Gen 3, Gen 4, Gen 5)
-            const gens = {};
+            // Group by Branch
+            const branches = {};
             familyData.forEach(p => {
-                const g = p.generation || 'Gen 4';
-                if (!gens[g]) gens[g] = [];
-                gens[g].push(p);
+                const b = p.branch || 'Other';
+                if (!branches[b]) branches[b] = [];
+                branches[b].push(p);
             });
 
-            const genOrder = ['Gen 1', 'Gen 2', 'Gen 3', 'Gen 4', 'Gen 5'];
-            let html = '';
+            let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
 
-            genOrder.forEach(gen => {
-                if (!gens[gen] || gens[gen].length === 0) return;
-                const members = gens[gen];
+            Object.keys(branches).forEach(branchName => {
+                const members = branches[branchName];
+                
+                const heads = members.filter(m => m.generation === 'Gen 1' || m.role.toLowerCase().includes('branch head') || m.role.toLowerCase().includes('patriarch'));
+                const children = members.filter(m => m.generation === 'Gen 4' || m.role.toLowerCase().includes('child'));
+                const grandchildren = members.filter(m => m.generation === 'Gen 5' || m.role.toLowerCase().includes('grandchild'));
 
                 html += `
-                    <div style="margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--card-bg);">
-                        <div style="font-weight: 700; color: var(--primary); font-size: 1.1rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
-                            <span><i class="fa-solid fa-layer-group"></i> ${gen} Hierarchy & Connections</span>
+                    <div style="border: 1px solid var(--border); border-radius: 12px; padding: 18px; background: var(--card-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                        <div style="font-weight: 700; color: var(--primary); font-size: 1.15rem; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border); padding-bottom: 8px;">
+                            <span><i class="fa-solid fa-sitemap"></i> ${branchName}</span>
                             <span style="font-size: 0.75rem; background: var(--primary); color: white; padding: 3px 10px; border-radius: 6px;">${members.length} Members</span>
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
                 `;
 
-                members.forEach(m => {
-                    html += `
-                        <div onclick="openProfileModal('${m.id}')" style="background: var(--bg); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" title="Click for profile">
-                            <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">${m.name}</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;"><i class="fa-solid fa-sitemap"></i> ${m.branch}</div>
-                            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Parents: ${m.parents || 'N/A'}</div>
-                        </div>
-                    `;
-                });
+                if (heads.length > 0) {
+                    html += `<div style="margin-bottom: 12px;">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;"><i class="fa-solid fa-user-tie"></i> Branch Head / Ancestor</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">`;
+                    heads.forEach(h => {
+                        html += `<div onclick="openProfileModal('${h.id}')" style="background: var(--male-bg); border: 1px solid var(--male-border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600;">${h.name} <span style="font-size:0.75rem; color:var(--text-muted);">(${h.generation})</span></div>`;
+                    });
+                    html += `</div></div>`;
+                }
 
-                html += `</div></div>`;
+                if (children.length > 0) {
+                    html += `<div style="margin-bottom: 12px; padding-left: 12px; border-left: 3px solid var(--primary-light);">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;"><i class="fa-solid fa-children"></i> Children (Gen 4)</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">`;
+                    children.forEach(c => {
+                        html += `<div onclick="openProfileModal('${c.id}')" style="background: var(--bg); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;"><span style="font-weight: 600;">${c.name}</span> <span style="font-size:0.7rem; color:var(--text-muted);">[Spouse: ${c.spouse || 'None'}]</span></div>`;
+                    });
+                    html += `</div></div>`;
+                }
+
+                if (grandchildren.length > 0) {
+                    html += `<div style="padding-left: 24px; border-left: 3px solid #10B981;">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;"><i class="fa-solid fa-baby"></i> Grandchildren (Gen 5)</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">`;
+                    grandchildren.forEach(g => {
+                        html += `<div onclick="openProfileModal('${g.id}')" style="background: #F0FDF4; border: 1px solid #BBF7D0; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;"><span style="font-weight: 500;">${g.name}</span> <span style="font-size:0.65rem; color:var(--text-muted);">(Parents: ${g.parents})</span></div>`;
+                    });
+                    html += `</div></div>`;
+                }
+
+                html += `</div>`;
             });
 
+            html += '</div>';
             container.innerHTML = html;
         }
 
-        
-        function importExcelData(event) {
+function importExcelData(event) {
             const file = event.target.files[0];
             if (!file) return;
 
