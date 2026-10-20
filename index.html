@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ndambuki Family Tree Explorer</title>
-    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -293,6 +293,47 @@
         }
         .edit-icon-btn:hover { background: var(--primary); color: white; }
 
+    
+        /* Profile Details Modal */
+        .profile-modal-content {
+            background: var(--card-bg);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+        .profile-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-avatar i { font-size: 1.8rem; color: var(--text-muted); }
+        .profile-info h3 { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+        .profile-info p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+        .profile-section { margin-bottom: 14px; font-size: 0.9rem; }
+        .profile-section span { font-weight: 600; color: var(--primary); display: block; margin-bottom: 2px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .profile-section div { background: var(--bg); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); }
+
     </style>
 </head>
 <body>
@@ -317,6 +358,7 @@
             </div>
         </div>
 
+        
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
             <button onclick="openAddModal()" style="flex: 1; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <i class="fa-solid fa-user-plus"></i> Add New Member
@@ -415,9 +457,292 @@
                 const cardClass = isFemale ? 'person-card female' : 'person-card male';
                 
                 return `
-                    <div class="\${cardClass}">
+                    <div class="${cardClass}">
                         <div class="card-header">
                             <div style="display: flex; align-items: center; gap: 12px;">
-                                <div class="avatar-container" onclick="triggerPhotoUpload('\${p.id}')" title="Click to upload photo">
-                                    <img id="avatar-\${p.id}" src="${p.photo \vert{}\vert{} ''}" alt="" style="display: ${p.photo ? 'block' : 'none'};">
-                                    <i id="avatar-icon-\${p.id}" class="fa-solid fa-
+                                <div class="avatar-container" onclick="triggerPhotoUpload('${p.id}')" title="Click to upload photo">
+                                    <img id="avatar-${p.id}" src="${p.photo || ''}" alt="" style="display: ${p.photo ? 'block' : 'none'};">
+                                    <i id="avatar-icon-${p.id}" class="fa-solid fa-user" style="display: ${p.photo ? 'none' : 'block'};"></i>
+                                </div>
+                                <div>
+                                    <div class="person-name" onclick="openProfileModal('${p.id}')" style="cursor: pointer; color: var(--primary);" title="Click to view full profile">${p.name}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">ID: ${p.id}</div>
+                                </div>
+                            </div>
+                            <div class="person-gen">${p.generation}</div>
+                            <button class="edit-icon-btn" onclick="openEditModal('${p.id}')" title="Edit Member"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+                        <div class="card-details">
+                            <div><span>Role:</span> ${p.role || 'Family Member'}</div>
+                            <div><span>DOB:</span> ${p.dob || 'N/A'}</div>
+                            <div><span>Spouse:</span> ${p.spouse || 'None / -'}</div>
+                            <div><span>Parents:</span> ${p.parents || 'N/A'}</div>
+                        </div>
+                        <div class="card-footer">
+                            <span class="branch-tag"><i class="fa-solid fa-sitemap"></i> ${p.branch}</span>
+                            <span>${p.death ? 'Passed: ' + p.death : 'Living'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load saved photos from localStorage
+        function loadSavedPhotos() {
+            const savedPhotos = JSON.parse(localStorage.getItem('ndambuki_family_photos') || '{}');
+            familyData.forEach(p => {
+                if (savedPhotos[p.id]) {
+                    p.photo = savedPhotos[p.id];
+                }
+            });
+        }
+        loadSavedPhotos();
+
+        let activePersonId = null;
+        function triggerPhotoUpload(id) {
+            activePersonId = id;
+            let fileInput = document.getElementById('hidden-file-input');
+            if (!fileInput) {
+                fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.id = 'hidden-file-input';
+                fileInput.accept = 'image/*';
+                fileInput.style.display = 'none';
+                fileInput.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            const base64String = event.target.result;
+                            const person = familyData.find(p => p.id == activePersonId);
+                            if (person) {
+                                person.photo = base64String;
+                                const savedPhotos = JSON.parse(localStorage.getItem('ndambuki_family_photos') || '{}');
+                                savedPhotos[activePersonId] = base64String;
+                                localStorage.setItem('ndambuki_family_photos', JSON.stringify(savedPhotos));
+                                filterData();
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                document.body.appendChild(fileInput);
+            }
+            fileInput.click();
+        }
+
+        
+        // Load custom members and edits from localStorage
+        function loadCustomData() {
+            const customMembers = JSON.parse(localStorage.getItem('ndambuki_custom_members') || '[]');
+            const memberEdits = JSON.parse(localStorage.getItem('ndambuki_member_edits') || '{}');
+            const savedPhotos = JSON.parse(localStorage.getItem('ndambuki_family_photos') || '{}');
+
+            // Apply edits to initial familyData
+            familyData.forEach(p => {
+                if (memberEdits[p.id]) {
+                    Object.assign(p, memberEdits[p.id]);
+                }
+                if (savedPhotos[p.id]) {
+                    p.photo = savedPhotos[p.id];
+                }
+            });
+
+            // Append custom added members
+            customMembers.forEach(cm => {
+                if (!familyData.some(p => p.id == cm.id)) {
+                    if (savedPhotos[cm.id]) cm.photo = savedPhotos[cm.id];
+                    familyData.push(cm);
+                }
+            });
+        }
+
+        loadCustomData();
+
+        function openAddModal() {
+            document.getElementById('modal-title').innerText = 'Add Family Member';
+            document.getElementById('edit-id').value = '';
+            document.getElementById('member-form').reset();
+            document.getElementById('member-modal').style.display = 'flex';
+        }
+
+        function openEditModal(id) {
+            const person = familyData.find(p => p.id == id);
+            if (!person) return;
+            document.getElementById('modal-title').innerText = 'Edit Family Member';
+            document.getElementById('edit-id').value = person.id;
+            document.getElementById('m-name').value = person.name || '';
+            document.getElementById('m-gen').value = person.generation || 'Gen 4';
+            document.getElementById('m-role').value = person.role || '';
+            document.getElementById('m-branch').value = person.branch || "Mang'uu Branch";
+            document.getElementById('m-dob').value = person.dob || '';
+            document.getElementById('m-death').value = person.death || '';
+            document.getElementById('m-spouse').value = person.spouse || '';
+            document.getElementById('m-parents').value = person.parents || '';
+            document.getElementById('member-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('member-modal').style.display = 'none';
+        }
+
+        function saveMember(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const name = document.getElementById('m-name').value;
+            const generation = document.getElementById('m-gen').value;
+            const role = document.getElementById('m-role').value;
+            const branch = document.getElementById('m-branch').value;
+            const dob = document.getElementById('m-dob').value;
+            const death = document.getElementById('m-death').value;
+            const spouse = document.getElementById('m-spouse').value;
+            const parents = document.getElementById('m-parents').value;
+
+            if (editId) {
+                // Editing existing member
+                const person = familyData.find(p => p.id == editId);
+                if (person) {
+                    person.name = name;
+                    person.generation = generation;
+                    person.role = role;
+                    person.branch = branch;
+                    person.dob = dob;
+                    person.death = death;
+                    person.spouse = spouse;
+                    person.parents = parents;
+
+                    const memberEdits = JSON.parse(localStorage.getItem('ndambuki_member_edits') || '{}');
+                    memberEdits[editId] = { name, generation, role, branch, dob, death, spouse, parents };
+                    localStorage.setItem('ndambuki_member_edits', JSON.stringify(memberEdits));
+                }
+            } else {
+                // Adding new member
+                const newId = Date.now();
+                const newPerson = { id: newId, generation, name, role, dob, death, spouse, parents, branch };
+                familyData.unshift(newPerson);
+
+                const customMembers = JSON.parse(localStorage.getItem('ndambuki_custom_members') || '[]');
+                customMembers.push(newPerson);
+                localStorage.setItem('ndambuki_custom_members', JSON.stringify(customMembers));
+            }
+
+            closeModal();
+            filterData();
+        }
+
+        
+        function openProfileModal(id) {
+            const person = familyData.find(p => p.id == id);
+            if (!person) return;
+            
+            document.getElementById('prof-name').innerText = person.name;
+            document.getElementById('prof-meta').innerText = `${person.generation} • ID: ${person.id}`;
+            document.getElementById('prof-role').innerText = person.role || 'Family Member';
+            document.getElementById('prof-branch').innerText = person.branch || 'N/A';
+            document.getElementById('prof-dates').innerText = `Born: ${person.dob || 'N/A'} ${person.death ? ' | Passed: ' + person.death : ' | Living'}`;
+            document.getElementById('prof-spouse').innerText = person.spouse || 'None / -';
+            document.getElementById('prof-parents').innerText = person.parents || 'N/A';
+
+            const profImg = document.getElementById('prof-img');
+            const profIcon = document.getElementById('prof-icon');
+            if (person.photo) {
+                profImg.src = person.photo;
+                profImg.style.display = 'block';
+                profIcon.style.display = 'none';
+            } else {
+                profImg.style.display = 'none';
+                profIcon.style.display = 'block';
+            }
+
+            document.getElementById('profile-modal').style.display = 'flex';
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').style.display = 'none';
+        }
+
+        // Initial render
+        filterData();
+    </script>
+
+    <!-- Add / Edit Modal -->
+    <div class="modal-overlay" id="member-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Add Family Member</h2>
+                <button class="close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="member-form" onsubmit="saveMember(event)">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" id="m-name" required placeholder="e.g. John Ndambuki">
+                </div>
+                <div class="form-group">
+                    <label>Generation</label>
+                    <select id="m-gen">
+                        <option value="Gen 1">Gen 1</option>
+                        <option value="Gen 2">Gen 2</option>
+                        <option value="Gen 3">Gen 3</option>
+                        <option value="Gen 4" selected>Gen 4</option>
+                        <option value="Gen 5">Gen 5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Role / Relationship</label>
+                    <input type="text" id="m-role" placeholder="e.g. Child / Grandchild / Spouse">
+                </div>
+                <div class="form-group">
+                    <label>Branch</label>
+                    <select id="m-branch">
+                        <option value="Mang'uu Branch">Mang'uu Branch</option>
+                        <option value="Mumo Branch">Mumo Branch</option>
+                        <option value="Muasya Branch">Muasya Branch</option>
+                        <option value="Muli Branch">Muli Branch</option>
+                        <option value="Usyu Branch">Usyu Branch</option>
+                        <option value="Watuma Branch">Watuma Branch</option>
+                        <option value="Mutunga Branch">Mutunga Branch</option>
+                        <option value="Sherinah Branch">Sherinah Branch</option>
+                        <option value="Kaswii Branch">Kaswii Branch</option>
+                        <option value="Mutete Branch">Mutete Branch</option>
+                        <option value="Nduume Branch">Nduume Branch</option>
+                        <option value="Aaron Branch">Aaron Branch</option>
+                        <option value="Sammy Branch">Sammy Branch</option>
+                        <option value="Rhoda Branch">Rhoda Branch</option>
+                        <option value="Foundational Ancestor">Foundational Ancestor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth (DOB)</label>
+                    <input type="date" id="m-dob">
+                </div>
+                <div class="form-group">
+                    <label>Death Date (Leave blank if living)</label>
+                    <input type="date" id="m-death">
+                </div>
+                <div class="form-group">
+                    <label>Spouse / Partner</label>
+                    <input type="text" id="m-spouse" placeholder="e.g. Jane Doe">
+                </div>
+                <div class="form-group">
+                    <label>Parents / Lineage</label>
+                    <input type="text" id="m-parents" placeholder="e.g. Titus & Rose">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // Register Service Worker for PWA offline support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
